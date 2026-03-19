@@ -39,7 +39,6 @@ app.use(bodyParser.urlencoded({
 
 app.use(express.static(path.join(__dirname, 'public')))
 app.use(methodOverride("_method"));
-mongoose.set('useFindAndModify', false); //supaya ga error untuk findByidAndUpdate dan Delete nya
 app.set("view engine", "ejs")
 app.use(flash())
 
@@ -109,7 +108,7 @@ app.all('*', (req, res, next) => {
 ///server
 
 
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 
 
 app.listen(PORT, () => console.log(`Server Running in ${process.env.NODE_ENV} mode on port ${PORT}`))

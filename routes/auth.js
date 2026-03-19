@@ -63,12 +63,14 @@ router.post("/login", passport.authenticate("local", { //<<  middleware
 	failureRedirect: "/login",
 	failureFlash: 'Invalid username or password.'
 
-}), (req, res) => {
+}), (req, res, next) => {
 	if (req.user.isAdmin) {
 		//admin only accesss /adminlogin
-		req.logout()
-		req.flash("error", "User and Password is for ADMIN")
-		res.redirect("/kost")
+		req.logout(function(err){
+			if (err) { return next(err); }
+			req.flash("error", "User and Password is for ADMIN")
+			res.redirect("/kost")
+		})
 	} else {
 		req.flash("success", `HI  ${req.user.username}   Welcome To The KostKita`)
 		res.redirect("/kost")
@@ -104,9 +106,11 @@ router.post("/adminlogin", passport.authenticate("local", { //<<  middleware
 
 
 // logout route
-router.get("/logout", (req, res) => {
-	req.logout()
-	res.redirect("/kost")
+router.get("/logout", (req, res, next) => {
+	req.logout(function(err){
+		if (err) { return next(err); }
+		res.redirect("/kost")
+	})
 })
 
 

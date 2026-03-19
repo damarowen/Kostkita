@@ -1,7 +1,8 @@
 const mongoose = require("mongoose");
 
 //** sanitize with dom purify and markdown html with JSDOM */
-const marked = require('marked')
+const markedModule = require('marked');
+const marked = markedModule.marked || markedModule;
 const createDomPurify = require('dompurify');
 const {
     JSDOM

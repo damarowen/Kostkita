@@ -73,9 +73,10 @@ router.post("/", Middleware.uploads, async function (req, res) {
         }).send()
         const addKost = new Kost(req.body.kost)
         addKost.geometry = geoData.body.features[0].geometry;
-        addKost.image = await req.files.map(f => ({
-            url: f.path,
-            filename: f.filename
+        // Persist Cloudinary URL and public_id (filename) for each upload
+        addKost.image = req.files.map(f => ({
+            url: f.path || f.secure_url || f.url,
+            filename: f.filename || f.public_id
         }));
         // add author to kost
         addKost.author = {
@@ -156,9 +157,10 @@ router.put("/:id", Middleware.ValidateImage, async function (req, res) {
             new: true,
             runValidators: true
         })
+        // Use secure_url/url and public_id to avoid empty subdocuments
         const imgs = req.files.map(f => ({
-            url: f.path,
-            filename: f.filename
+            url: f.path || f.secure_url || f.url,
+            filename: f.filename || f.public_id
         }));
         const geoData = await geocoder.forwardGeocode({
             query: req.body.location,
