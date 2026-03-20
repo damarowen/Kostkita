@@ -30,20 +30,24 @@ function changeState() {
     const fas = document.getElementById('fas');
     fas.classList.add('fa-thumbs-up')
 
-    //sent http request to sever with axios
-    axios({
-            method: 'post',
-            url: url,
-            //use form encoded not aplication/json
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            }
-        })
-        .then(res => {
-            console.log(res)
-        });
+    // disable button to prevent rapid double clicks
+    const activeBtn = btnLike || btnUnlike
+    if (activeBtn) activeBtn.disabled = true
 
-        //reload page
-        location.reload()
+    // send http request to server and reload only after it completes
+    axios({
+        method: 'post',
+        url: url,
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+    })
+    .then(() => {
+        // ensure server-side state is saved before reloading UI
+        window.location.reload()
+    })
+    .catch((err) => {
+        console.error(err)
+        // fallback: reload to resync UI with server
+        window.location.reload()
+    })
     }
 

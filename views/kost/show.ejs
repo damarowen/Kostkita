@@ -220,8 +220,6 @@
                             aria-expanded="false" aria-controls="collapseComment">
                             Add New Comment</a>
                     </div>
-                    <% console.log("User Not Login Yet") %>
-
                     <% } %>
                     <!--* if user already comment -->
                     <% if (currentUser && kost.comment.some (function (comment) {return comment.author.id.equals(currentUser._id)}) ) {   %>
@@ -240,8 +238,6 @@
                             aria-expanded="false" aria-controls="collapseComment">
                              Add New Comment</a>
                     </div>
-                    <% console.log("User Not Make Any Comment : " + kost.comment.some (function (comment) {return comment.author.id.equals(currentUser._id)}))  %>
-
                     <% } %>
                 </div>
 

@@ -1,318 +1,207 @@
-const express = require("express")
+const express = require('express')
 const router = express.Router()
-const Kost = require("../models/Kost")
-const Comment = require("../models/Comment");
-const Review = require("../models/Review");
-const Middleware = require("../middleware/index")
-const {
-    cloudinary
-} = require("../utils/cloudinary");
-const mbxGeocoding = require("@mapbox/mapbox-sdk/services/geocoding");
-const mapBoxToken = process.env.MAPBOX_API_KEY;
-const geocoder = mbxGeocoding({
-    accessToken: mapBoxToken
-});
-
-
+const Kost = require('../models/kost')
+// const Comment = require('../models/comment')
+// const Review = require('../models/review')
+const Middleware = require('../middleware/index')
+const { cloudinary } = require('../utils/cloudinary')
+const { validateSearchQuery, validateCreateKost, validateUpdateKost } = require('../dtos/kost.dto')
+const { withValidation } = require('../dtos/validate')
+const { createMapboxAdapter } = require('../adapters/mapbox.adapter')
+const kostService = require('../services/kost.service')
+const mapBoxToken = process.env.MAPBOX_API_KEY
+const geocoderAdapter = createMapboxAdapter(mapBoxToken)
 
 //**INDEX ROUTE - DISPLAY ALL KOST
 //** @route  /KOST
 //** @access  Public
 
-router.get("/", async function (req, res) {
+router.get(
+  '/',
+  withValidation(validateSearchQuery, (req) => req.query),
+  async function (req, res) {
     try {
-        if (req.query.cari) {
-            const query = new RegExp(escapeRegex(req.query.cari), 'gi');
-            const data = await Kost.find({
-                $or: [{
-                    name: query,
-                }, {
-                    location: query
-                }, {
-                    "author.username": query
-                }]
-            })
-            res.render("kost/index", {
-                data
-            });
-
-        } else {
-            const data = await Kost.find({}).sort({
-                createdAt: -1
-            })
-
-            res.render("kost/index", {
-                data
-            })
-        }
+      const { term, limit, page } = req.validated.value
+      if (term) {
+        const result = await kostService.searchKosts({ term, page, limit })
+        return res.render('kost/index', { data: result.items })
+      }
+      const result = await kostService.searchKosts({ term: '', page, limit })
+      return res.render('kost/index', { data: result.items })
     } catch (err) {
-        console.log(err)
-        req.flash("error", `${err}`);
-        res.redirect(`back`)
+      console.log(err)
+      req.flash('error', 'Something went wrong while loading Kost list')
+      res.redirect(`back`)
     }
-})
-
-
+  }
+)
 
 //**RENDER NEW KOST
 //** @route  /kost/new
 //** @access  Private
-router.get("/new", Middleware.isLogggedIn, function (req, res) {
-    res.render("kost/new")
+router.get('/new', Middleware.isLoggedIn, function (req, res) {
+  res.render('kost/new')
 })
-
 
 //**CREATE ROUTE - ADD NEW KOST
 //** @route  /kost
 //** @access  Private
-router.post("/", Middleware.uploads, async function (req, res) {
+router.post(
+  '/',
+  Middleware.isLoggedIn,
+  Middleware.uploads,
+  withValidation(validateCreateKost, (req) => req.body),
+  async function (req, res) {
     try {
-        const geoData = await geocoder.forwardGeocode({
-            query: req.body.kost.location,
-            limit: 1
-        }).send()
-        const addKost = new Kost(req.body.kost)
-        addKost.geometry = geoData.body.features[0].geometry;
-        // Persist Cloudinary URL and public_id (filename) for each upload
-        addKost.image = req.files.map(f => ({
-            url: f.path || f.secure_url || f.url,
-            filename: f.filename || f.public_id
-        }));
-        // add author to kost
-        addKost.author = {
-            id: req.user._id,
-            username: req.user.username
-        }
-        console.log(addKost)
-        await addKost.save()
-            .then(() => req.flash("success", "Succesfully Added New Kost"))
-            .then(() => res.redirect('/kost'))
-            .catch(error => console.log(error.message));
+      const payload = req.validated.value
+      const addKost = await kostService.createKost({
+        payload,
+        images: req.files,
+        user: req.user,
+        geocoder: geocoderAdapter,
+      })
+      console.log(addKost)
+      req.flash('success', 'Succesfully Added New Kost')
+      return res.redirect('/kost')
     } catch (err) {
-        console.log(err)
-        req.flash("error", "error");
-        res.redirect(`back`)
+      console.log(err)
+      req.flash('error', 'Failed to create Kost')
+      res.redirect(`back`)
     }
-
-
-
-});
-
-
+  }
+)
 
 //**SHOW KOST
 //** @route  /kost/:ID
 //** @access  Public
-router.get("/:id", async function (req, res) {
-    try {
-        const kost = await Kost.findById(req.params.id).populate('likes').
-        populate({
-            path: "reviews",
-            options: {
-                sort: {
-                    updatedAt: -1
-                }
-            }
-        }).
-        populate({
-            path: "comment",
-            options: {
-                sort: {
-                    updatedAt: -1
-                }
-            }
-        })
-        res.render("kost/show", {
-            kost
-        })
-
-    } catch (err) {
-        //* display error from mongoose validation
-        console.log(err)
-        req.flash("error", `${err}`);
-        res.redirect(`back`)
-    }
+router.get('/:id', async function (req, res) {
+  try {
+    const kost = await Kost.findById(req.params.id)
+      .populate('likes')
+      .populate({
+        path: 'reviews',
+        options: {
+          sort: {
+            updatedAt: -1,
+          },
+        },
+      })
+      .populate({
+        path: 'comment',
+        options: {
+          sort: {
+            updatedAt: -1,
+          },
+        },
+      })
+    res.render('kost/show', {
+      kost,
+    })
+  } catch (err) {
+    //* display error from mongoose validation
+    console.log(err)
+    req.flash('error', `${err}`)
+    res.redirect(`back`)
+  }
 })
 
 //**RENDER EDIT kost
 //** @route  /kost/:ID/edit
 //** @access  Private
-router.get("/:id/edit", Middleware.checkKostOwner, function (req, res) {
-    Kost.findById(req.params.id, (err, found) => {
-        res.render("kost/edit", {
-            edit_ejs: found
-        })
-    });
-});
-
-
+router.get('/:id/edit', Middleware.checkKostOwner, function (req, res) {
+  Kost.findById(req.params.id, (err, found) => {
+    res.render('kost/edit', {
+      edit_ejs: found,
+    })
+  })
+})
 
 //**UPDATE KOST
 //** @route  /kost/:ID
 //** @access  Private
-router.put("/:id", Middleware.ValidateImage, async function (req, res) {
+router.put(
+  '/:id',
+  Middleware.ValidateImage,
+  withValidation(validateUpdateKost, (req) => req.body),
+  async function (req, res) {
     try {
-
-        const kost = await Kost.findByIdAndUpdate(req.params.id, req.body, {
-            new: true,
-            runValidators: true
-        })
-        // Use secure_url/url and public_id to avoid empty subdocuments
-        const imgs = req.files.map(f => ({
-            url: f.path || f.secure_url || f.url,
-            filename: f.filename || f.public_id
-        }));
-        const geoData = await geocoder.forwardGeocode({
-            query: req.body.location,
-            limit: 1
-        }).send()
-        kost.geometry = geoData.body.features[0].geometry;
-        kost.image.push(...imgs);
-        await kost.save();
-        console.log("Kost Updated via Cloudinary")
-        req.flash("success", "Successfully Updated!");
-        res.redirect(`/kost/${kost._id}`)
+      const payload = req.validated.value
+      const kost = await kostService.updateKost({
+        id: req.params.id,
+        payload,
+        images: req.files,
+        geocoder: geocoderAdapter,
+      })
+      console.log('Kost Updated via Cloudinary')
+      req.flash('success', 'Successfully Updated!')
+      res.redirect(`/kost/${kost._id}`)
     } catch (err) {
-        // //* display error from mongoose validation
-        // const message = Object.values(err.errors).map(val => val);
-        console.log(err)
-        req.flash("error", `${err}`);
-        res.redirect(`back`)
+      // //* display error from mongoose validation
+      // const message = Object.values(err.errors).map(val => val);
+      console.log(err)
+      req.flash('error', `${err}`)
+      res.redirect(`back`)
     }
-})
-
+  }
+)
 
 //**DELETE KOST
 //** @route  /kost/:ID
 //** @access  Private
-router.delete("/:id", Middleware.checkKostOwner, function (req, res) {
-
-    Kost.findById(req.params.id, async function (err, kost) {
-
-        try {
-
-            //* deletes all comments associated with the kost
-            Comment.deleteOne({
-                "_id": {
-                    $in: kost.comment
-                }
-            }, function (err) {
-                if (err) {
-                    console.log(err);
-                    return res.redirect("/kost");
-                }
-                console.log("Comment Deleted from Kost");
-            })
-
-            //* deletes all reviews associated with the kost
-            Review.deleteOne({
-                "_id": {
-                    $in: kost.reviews
-                }
-            }, function (err) {
-                if (err) {
-                    console.log(err);
-                    return res.redirect("/kost");
-                }
-                console.log("Review Deleted from Kost");
-
-            })
-            //*  delete image
-            for (const x of kost.image) {
-                console.log(x)
-                await cloudinary.uploader.destroy(x.filename)
-            }
-
-            //*  delete kost
-            await kost.remove();
-            req.flash("success", "Kost deleted successfully!");
-            res.redirect("/kost");
-
-        } catch (err) {
-            console.log(err)
-            req.flash("error", `${err}`);
-            return res.redirect("back");
-        }
-
-    });
-});
-
+router.delete('/:id', Middleware.checkKostOwner, async function (req, res) {
+  try {
+    await kostService.deleteKost({ id: req.params.id, cloudinary })
+    req.flash('success', 'Kost deleted successfully!')
+    return res.redirect('/kost')
+  } catch (err) {
+    console.log(err)
+    req.flash('error', `${err}`)
+    return res.redirect('back')
+  }
+})
 
 //**DELETE PHOTO CLIENT SIDE
 //** @route  /kost/:ID/:cloudinaryFolder/:imageId
 //** @access  Private
 
-router.post("/:id/KostKita/:imageid", async function (req, res) {
-    try {
-        const kost = await Kost.findById(req.params.id)
-        const file = `KostKita/${req.params.imageid}`
-
-        //*destroy in local
-        await kost.updateOne({
-            $pull: {
-                image: {
-                    filename: file
-                }
-            }
-        })
-        //*destroy in cloud
-        await cloudinary.uploader.destroy(file)
-        console.log(`${file} Deleted...`)
-    } catch (err) {
-        console.log(err)
-        req.flash("error", `${err}`);
-        return res.redirect("back");
-    }
+router.post('/:id/KostKita/:imageid', async function (req, res) {
+  try {
+    const file = `KostKita/${req.params.imageid}`
+    await kostService.removeImage({ id: req.params.id, publicId: file, cloudinary })
+    console.log(`${file} Deleted...`)
+    return res.status(200).json({ success: true })
+  } catch (err) {
+    console.log(err)
+    return res.status(400).json({ success: false, message: 'Failed to delete image' })
+  }
 })
-
-
 
 //**LIKE BUTTON
 //** @route  /kost/:ID/Like
 //** @access  Private
 
-router.post("/:id/like", Middleware.isLogggedIn, function (req, res) {
-    try {
-        Kost.findById(req.params.id, function (err, kost) {
-            if (err) {
-                console.log(err);
-                return res.redirect("/kost");
-            }
-
-            //* check if req.user._id exists in kost.likes
-            const userAlreadyLike = kost.likes.some(function (like) {
-                return like.equals(req.user._id);
-            });
-
-            if (userAlreadyLike) {
-                //* user already liked, removing like
-                kost.likes.pull(req.user._id);
-                console.log(`total likes ${kost.likes.length}`)
-                kost.save()
-                return res.redirect("/kost/" + kost._id);
-            } else {
-                //* adding the new user like
-                kost.likes.push(req.user);
-                console.log(`total likes ${kost.likes.length}`)
-                kost.save()
-                return res.redirect("/kost/" + kost._id);
-            }
-
-        });
-    } catch (err) {
-        console.log(err)
-        req.flash("error", `${err}`);
-        return res.redirect("back");
-
+router.post('/:id/like', Middleware.isLoggedIn, async function (req, res) {
+  try {
+    const result = await kostService.toggleLike({ kostId: req.params.id, userId: req.user._id })
+    // If request comes from XHR (axios) or expects JSON, respond with JSON
+    const wantsJSON =
+      req.xhr || (req.get('Accept') && req.get('Accept').includes('application/json'))
+    if (wantsJSON) {
+      return res.json({ success: true, ...result })
     }
+    return res.redirect('/kost/' + req.params.id)
+  } catch (err) {
+    console.log(err)
+    const wantsJSON =
+      req.xhr || (req.get('Accept') && req.get('Accept').includes('application/json'))
+    if (wantsJSON) {
+      return res.status(400).json({ success: false, message: 'Failed to toggle like' })
+    }
+    req.flash('error', 'Failed to toggle like')
+    return res.redirect('back')
+  }
+})
 
-});
+//
 
-
-
-//* function for search
-function escapeRegex(text) {
-    return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
-};
-
-module.exports = router;
+module.exports = router
