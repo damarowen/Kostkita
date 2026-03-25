@@ -13,11 +13,15 @@ const express = require('express'),
   path = require('path')
 
 //requiring routes
-const kostKitaRoutes = require('./routes/kostKita')
-const commentRoutes = require('./routes/comment')
-const reviewRoutes = require('./routes/reviews')
+const kostRenderRoutes = require('./routes/kost/render')
+const kostApiRoutes = require('./routes/kost/api')
+const commentRenderRoutes = require('./routes/comment/render')
+const commentApiRoutes = require('./routes/comment/api')
+const reviewRenderRoutes = require('./routes/reviews/render')
+const reviewApiRoutes = require('./routes/reviews/api')
 const indexRoutes = require('./routes/auth')
-const userProfileRoutes = require('./routes/user_profile')
+const userRenderRoutes = require('./routes/users/render')
+const userApiRoutes = require('./routes/users/api')
 
 const connectDB = require('./config/db')
 const { registerGracefulShutdown } = require('./utils/gracefulShutdown')
@@ -81,10 +85,13 @@ app.use(flash())
 //END//
 
 //ROUTERS
-app.use('/', indexRoutes, userProfileRoutes) //parameter pertama akan menimpa url
-app.use('/kost', kostKitaRoutes)
-app.use('/kost/:id/comment', commentRoutes)
-app.use('/kost/:id/reviews', reviewRoutes)
+app.use('/', indexRoutes, userRenderRoutes, userApiRoutes) //parameter pertama akan menimpa url
+app.use('/kost', kostRenderRoutes)
+app.use('/kost', kostApiRoutes)
+app.use('/kost/:id/comment', commentRenderRoutes)
+app.use('/kost/:id/comment', commentApiRoutes)
+app.use('/kost/:id/reviews', reviewRenderRoutes)
+app.use('/kost/:id/reviews', reviewApiRoutes)
 
 // Global error handler (keep minimal)
 app.use((err, req, res, _next) => {

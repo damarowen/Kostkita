@@ -69,6 +69,20 @@
 </div>
 
 
+	<% if (typeof pagination !== 'undefined' && pagination && pagination.totalPages > 1) { %>
+	<div class="container text-center mt-5">
+		<a class="btn btn-sm btn-pink <%= pagination.page <= 1 ? 'disabled' : '' %>" role="button"
+			 href="/kost?<%= term ? 'cari=' + encodeURIComponent(term) + '&' : '' %>page=<%= pagination.page - 1 %>&limit=<%= pagination.limit %>"
+			 tabindex="-1" aria-disabled="<%= pagination.page <= 1 %>">Prev</a>
+
+		<span class="mx-2 align-middle small">Page <%= pagination.page %> of <%= pagination.totalPages %></span>
+
+		<a class="btn btn-sm btn-pink <%= pagination.page >= pagination.totalPages ? 'disabled' : '' %>" role="button"
+			 href="/kost?<%= term ? 'cari=' + encodeURIComponent(term) + '&' : '' %>page=<%= pagination.page + 1 %>&limit=<%= pagination.limit %>">Next</a>
+	</div>
+	<% } %>
+
+
 
 
 <%- include ('../partials/footer')  %>

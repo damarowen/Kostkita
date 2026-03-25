@@ -17,13 +17,13 @@ function validateSearchQuery(query) {
   const term = (query && query.cari ? String(query.cari) : '').trim()
   const limitRaw = query ? query.limit : undefined
   const pageRaw = query ? query.page : undefined
-  let limit = toInt(limitRaw, 20)
+  let limit = toInt(limitRaw, 9)
   let page = toInt(pageRaw, 1)
   if (limit < 1) {
-    limit = 20
+    limit = 9
   }
-  if (limit > 50) {
-    limit = 50
+  if (limit > 9) {
+    limit = 9
   }
   if (page < 1) {
     page = 1

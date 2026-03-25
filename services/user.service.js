@@ -21,3 +21,27 @@ async function updateUser({ id, payload }) {
 }
 
 module.exports = { updateUser }
+
+/**
+ * Change user password using passport-local-mongoose utilities.
+ * @param {{ id: string, currentPassword: string, newPassword: string }} params
+ */
+async function changePassword({ id, currentPassword, newPassword }) {
+  const user = await User.findById(id)
+  if (!user) {
+    const err = new Error('User not existed')
+    err.status = 404
+    throw err
+  }
+  // changePassword provided by passport-local-mongoose
+  await new Promise((resolve, reject) => {
+    user.changePassword(currentPassword, newPassword, (err) => {
+      if (err) return reject(err)
+      return resolve()
+    })
+  })
+  await user.save()
+  return { id: String(user._id) }
+}
+
+module.exports.changePassword = changePassword
