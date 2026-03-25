@@ -39,6 +39,12 @@
             </div>
             <br>
 
+            <div class="text-center mb-4">
+                <% if (currentUser && String(currentUser._id) === String(user._id)) { %>
+                    <a href="/users/<%= user._id %>/password/edit" class="btn btn-pink">Change Password</a>
+                <% } %>
+            </div>
+
 
         </div>
 

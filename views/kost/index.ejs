@@ -37,9 +37,9 @@
 		<div class="col-lg-4">
 			<div class="card">
 				<!-- ** if user not upload photo, photo using img default -->
-				<% if(kost.image == 0){%>
+				<% if(!kost.image || kost.image.length === 0 || !kost.image[0] || !kost.image[0].url) { %>
 				<img class="card-img-top" src="/img/default.png" alt="Card image cap">
-				<% } else if(kost.image.length > 0) { %>
+				<% } else { %>
 				<img class="card-img-top" src="<%= kost.image[0].url %>" alt="Card image cap">
 				<% } %>
 				<div class="card-body">
@@ -67,6 +67,20 @@
 
 	</div>
 </div>
+
+
+	<% if (typeof pagination !== 'undefined' && pagination && pagination.totalPages > 1) { %>
+	<div class="container text-center mt-5">
+		<a class="btn btn-sm btn-pink <%= pagination.page <= 1 ? 'disabled' : '' %>" role="button"
+			 href="/kost?<%= term ? 'cari=' + encodeURIComponent(term) + '&' : '' %>page=<%= pagination.page - 1 %>&limit=<%= pagination.limit %>"
+			 tabindex="-1" aria-disabled="<%= pagination.page <= 1 %>">Prev</a>
+
+		<span class="mx-2 align-middle small">Page <%= pagination.page %> of <%= pagination.totalPages %></span>
+
+		<a class="btn btn-sm btn-pink <%= pagination.page >= pagination.totalPages ? 'disabled' : '' %>" role="button"
+			 href="/kost?<%= term ? 'cari=' + encodeURIComponent(term) + '&' : '' %>page=<%= pagination.page + 1 %>&limit=<%= pagination.limit %>">Next</a>
+	</div>
+	<% } %>
 
 
 

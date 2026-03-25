@@ -29,7 +29,7 @@
 
                     <% kost.image.forEach((img, i) => {  %>
                     <div class="carousel-item <%= i === 0 ? 'active' : ''%> text-center">
-                        <img src="<%= img.url%>" class="responsive-img" alt="">
+                        <img src="<%= img && img.url ? img.url : '/img/default.png' %>" class="responsive-img" alt="">
                     </div>
                     <% }) %>
     
@@ -220,8 +220,6 @@
                             aria-expanded="false" aria-controls="collapseComment">
                             Add New Comment</a>
                     </div>
-                    <% console.log("User Not Login Yet") %>
-
                     <% } %>
                     <!--* if user already comment -->
                     <% if (currentUser && kost.comment.some (function (comment) {return comment.author.id.equals(currentUser._id)}) ) {   %>
@@ -240,8 +238,6 @@
                             aria-expanded="false" aria-controls="collapseComment">
                              Add New Comment</a>
                     </div>
-                    <% console.log("User Not Make Any Comment : " + kost.comment.some (function (comment) {return comment.author.id.equals(currentUser._id)}))  %>
-
                     <% } %>
                 </div>
 
